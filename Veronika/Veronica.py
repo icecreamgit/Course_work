@@ -38,13 +38,13 @@ def multiplicationVariant(mode, n):
         return (np.sqrt(n) + 0.155 + 0.24 / np.sqrt(n))
     elif mode == 1:
         return np.sqrt(n)
+#     (np.sqrt(n)) + 1. / (3 * np.sqrt(n))
 
 def Vn(params, n, N, type): # N - число испытаний, n - объём выборки
     Vnlocal = np.zeros((N, 1))
     for i in range(N):
         xi = sorted(np.random.normal(loc=0., scale=1., size=n))
-        Vnlocal[i][0] = (Dplus_n(xi, params, n, type) + Dminus_n(xi, params, n, type))
-        print(i)
+        Vnlocal[i][0] = (Dplus_n(xi, params, n, type) + Dminus_n(xi, params, n, type)) * (np.sqrt(n)) + 1. / (3 * np.sqrt(n))
     return Vnlocal
 
 def monteKarlo(alpha, params, n, nKarlo, Distr, type):
@@ -52,18 +52,30 @@ def monteKarlo(alpha, params, n, nKarlo, Distr, type):
     M = int(alpha * nKarlo)
     for _ in range(nKarlo):
         mainKarlo = Vn(params=params, n=n, N=1, type=type)
-        if mainKarlo[0] > Distr[M - 1]:
+        if mainKarlo[0] > Distr[M]:
             m += 1
     return m / nKarlo
 
+def unitTest(params, n, N, type, nKarlo, alpha):
+    # Тип используемого распределения, 3 вида в проге: logistic, normal, laplace
+    kuperDestributionModified = Vn(params, n=n, N=N, type='normal')
+    result = monteKarlo(alpha, params, n=n, nKarlo=nKarlo, Distr=kuperDestributionModified, type=type)
+    if result < alpha:
+        print(f'type :\t{type}\nДостигаемый уровень значимости при alpha = {alpha}\t:\t'
+              f'{result}\nГипотеза отвергается')
+    else:
+        print(f'type :\t{type}\nДостигаемый уровень значимости при alpha = {alpha}\t:\t'
+              f'{result}\nГипотеза НЕ отвергается')
 
 def main():
-    alpha, volume, params, N = 0.1, 50, [0., 1.], 1000  # params = [loc= something value, scale= something value]
+    alpha, volume, params, N = 0.1, 100, [0., 1.], 16600  # params = [loc= something value, scale= something value]
     nKarlo = 1000
-    type = 'normal' # Тип используемого распределения, 3 вида в проге: logistic, normal, laplace
-    kuperDestributionModified = Vn(params, n=volume, N=N, type='normal') * (np.sqrt(volume)) + 1. / (3 * np.sqrt(volume))
-    print(f'Достигаемый уровень значимости при alpha = {alpha}\t:\t'
-          f'{monteKarlo(alpha, params, n=volume, nKarlo=nKarlo, Distr=kuperDestributionModified, type=type)}')
-    writeFile(kuperDestributionModified, N, "Купер_0_155", volume)
+
+    # Тип используемого распределения, 3 вида в проге: logistic, normal, laplace
+    for i in range(3):
+        unitTest(params, volume, N, "logistic", nKarlo, alpha)
+    for i in range(3):
+        unitTest(params, volume, N, "normal", nKarlo, alpha)
+    # writeFile(kuperDestributionModified, N, "Купер_1_sqrt", volume)
 
 main()
